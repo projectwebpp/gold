@@ -239,7 +239,7 @@
 .btn-animate:active {
     transform: translateY(0);
 }
-       /* Fixed Tab Styles - แก้ไขให้อยู่ด้านล่างเสมอ */
+          /* Fixed Tab Styles - แก้ไขให้อยู่ด้านล่างเสมอ */
         .bottom-tabs {
             position: fixed !important;
             bottom: 0 !important;
@@ -284,13 +284,6 @@
             overflow-y: auto;
         }
         
-        /* App container */
-        #app {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
         
         /* Loading and other styles */
         #loading {
@@ -318,17 +311,7 @@
             font-family: 'Prompt', sans-serif;
         }
         
-        /* Mobile specific styles */
-        @media (max-width: 768px) {
-            .bottom-tabs {
-                height: 65px !important;
-            }
-            
-            .page-content {
-                padding-bottom: 75px !important;
-            }
-        }
-        
+     
         /* Smooth transitions */
         .content-section {
             transition: opacity 0.3s ease-in-out;
