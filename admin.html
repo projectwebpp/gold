@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการระบบ - ระบบออมทอง</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+        }
+        .mobile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        .page-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            flex: 1;
+            text-align: center;
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .btn-animate {
+            transition: all 0.3s ease;
+        }
+        .btn-animate:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .page-container {
+            min-height: calc(100vh - 80px);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        .withdrawal-card {
+            border-left: 4px solid #f59e0b;
+            background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 10%, #ffffff 20%);
+        }
+        .topup-card {
+            border-left: 4px solid #10b981;
+            background: linear-gradient(135deg, #d1fae5 0%, #34d399 10%, #ffffff 20%);
+        }
+        .status-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fbbf24;
+        }
+        .status-success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        .status-rejected {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Mobile Header -->
+    <div class="mobile-header p-4 flex items-center space-x-4">
+        <button onclick="goBack()" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <h1 class="page-title">จัดการระบบ</h1>
+        <button onclick="refreshData()" class="back-btn">
+            <i class="fas fa-sync-alt"></i>
+        </button>
+    </div>
+
+    <!-- Ultra Fast Loading Screen -->
+    <div id="loading" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-2"></div>
+            <p class="text-gray-600 text-xs">กำลังโหลด...</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="app" class="hidden page-container p-4">
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-lg shadow card-hover">
+                <div class="flex items-center">
+                    <i class="fas fa-clock text-3xl text-orange-500 mr-3"></i>
+                    <div>
+                        <p class="text-gray-500 text-sm">รอการอนุมัติ</p>
+                        <p id="pendingCount" class="text-2xl font-bold text-orange-600">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow card-hover">
+                <div class="flex items-center">
+                    <i class="fas fa-money-bill-wave text-3xl text-amber-500 mr-3"></i>
+                    <div>
+                        <p class="text-gray-500 text-sm">ถอนเงินรอ</p>
+                        <p id="pendingWithdrawals" class="text-2xl font-bold text-amber-600">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <h3 class="font-bold text-lg mb-3">
+                <i class="fas fa-tools mr-2 text-blue-500"></i>เครื่องมือจัดการ
+            </h3>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="approveAllTopups()" class="bg-green-500 text-white p-3 rounded-lg text-sm font-medium hover:bg-green-600 btn-animate">
+                    <i class="fas fa-check-double mr-2"></i>อนุมัติเติมเงินทั้งหมด
+                </button>
+                <button onclick="showBulkWithdrawalActions()" class="bg-orange-500 text-white p-3 rounded-lg text-sm font-medium hover:bg-orange-600 btn-animate">
+                    <i class="fas fa-money-bill-wave mr-2"></i>จัดการถอนเงินกลุ่ม
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="bg-white rounded-lg shadow mb-4">
+            <div class="flex border-b">
+                <button onclick="switchTab('pending')" id="pendingTab" class="flex-1 py-3 px-2 text-center font-medium border-b-2 border-orange-500 text-orange-600 text-sm">
+                    <i class="fas fa-clock mr-1"></i>รออนุมัติ
+                </button>
+                <button onclick="switchTab('withdrawals')" id="withdrawalsTab" class="flex-1 py-3 px-2 text-center font-medium text-gray-500 text-sm">
+                    <i class="fas fa-money-bill-wave mr-1"></i>ถอนเงิน
+                </button>
+                <button onclick="switchTab('stats')" id="statsTab" class="flex-1 py-3 px-2 text-center font-medium text-gray-500 text-sm">
+                    <i class="fas fa-chart-bar mr-1"></i>สถิติ
+                </button>
+            </div>
+        </div>
+
+        <!-- Pending Transactions Tab -->
+        <div id="pendingContent" class="space-y-4">
+            <!-- Pending transactions will be loaded here -->
+        </div>
+
+        <!-- Withdrawals Tab -->
+        <div id="withdrawalsContent" class="hidden space-y-4">
+            <!-- Withdrawal transactions will be loaded here -->
+        </div>
+
+        <!-- Statistics Tab -->
+        <div id="statsContent" class="hidden">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-bold text-lg mb-4">
+                    <i class="fas fa-chart-line mr-2 text-blue-500"></i>สถิติระบบ
+                </h3>
+                <div id="systemStats" class="grid grid-cols-2 gap-4">
+                    <!-- Statistics will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Detail Modal -->
+    <div id="transactionModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-md w-full p-6 max-h-96 overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">รายละเอียดรายการ</h3>
+                <button onclick="closeTransactionModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="transactionDetails">
+                <!-- Transaction details will be loaded here -->
+            </div>
+            <div id="transactionActions" class="flex space-x-3 mt-6">
+                <!-- Action buttons will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Modal -->
+    <div id="bulkModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-lg w-full p-6 max-h-96 overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">จัดการถอนเงินกลุ่ม</h3>
+                <button onclick="closeBulkModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="bulkContent">
+                <!-- Bulk actions content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script>
+        // Global Variables
+        let userData = {};
+        let pendingTransactions = [];
+        let pendingWithdrawals = [];
+        let allTransactions = [];
+        let systemStats = {};
+        let currentTab = 'pending';
+
+        // Fast loading management
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+        }
+
+        // Utility Functions
+        function formatCurrency(amount) {
+            return parseFloat(amount).toLocaleString('th-TH', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function formatNumber(num) {
+            return parseFloat(num).toLocaleString('th-TH', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function getStatusClass(status) {
+            if (status === 'รอดำเนินการ') return 'status-pending';
+            if (status === 'สำเร็จ') return 'status-success';
+            if (status.includes('ปฏิเสธ') || status.includes('ยกเลิก')) return 'status-rejected';
+            return 'status-pending';
+        }
+
+        // Navigation Functions
+        function goBack() {
+            window.history.back();
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            // Reset all tabs
+            document.querySelectorAll('[id$="Tab"]').forEach(tabBtn => {
+                tabBtn.classList.remove('border-orange-500', 'text-orange-600');
+                tabBtn.classList.add('text-gray-500');
+            });
+            
+            // Hide all content
+            document.getElementById('pendingContent').classList.add('hidden');
+            document.getElementById('withdrawalsContent').classList.add('hidden');
+            document.getElementById('statsContent').classList.add('hidden');
+
+            // Activate selected tab
+            currentTab = tab;
+            document.getElementById(tab + 'Tab').classList.add('border-orange-500', 'text-orange-600');
+            document.getElementById(tab + 'Tab').classList.remove('text-gray-500');
+            document.getElementById(tab + 'Content').classList.remove('hidden');
+
+            // Load content for the selected tab
+            if (tab === 'pending') {
+                loadPendingTransactions();
+            } else if (tab === 'withdrawals') {
+                loadPendingWithdrawals();
+            } else if (tab === 'stats') {
+                loadSystemStats();
+            }
+        }
+
+        // Data Loading Functions
+        async function refreshData() {
+            const refreshBtn = event.target;
+            const originalIcon = refreshBtn.innerHTML;
+            
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            refreshBtn.disabled = true;
+
+            try {
+                await loadPendingTransactions();
+                await loadPendingWithdrawals();
+                await loadSystemStats();
+                updateStatistics();
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'รีเฟรชเรียบร้อย',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถรีเฟรชข้อมูลได้', 'error');
+            } finally {
+                refreshBtn.innerHTML = originalIcon;
+                refreshBtn.disabled = false;
+            }
+        }
+
+        // Load pending transactions (topup only)
+        async function loadPendingTransactions() {
+            try {
+                const response = await fetch(`${API_URL}?action=getPendingTransactions`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    pendingTransactions = data.transactions.filter(t => t.type === 'เติมเงิน');
+                    renderPendingTransactions();
+                    updateStatistics();
+                }
+            } catch (error) {
+                console.error('Error loading pending transactions:', error);
+                pendingTransactions = [];
+                renderPendingTransactions();
+            }
+        }
+
+        // Load pending withdrawals
+        async function loadPendingWithdrawals() {
+            try {
+                const response = await fetch(`${API_URL}?action=getPendingTransactions`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    pendingWithdrawals = data.transactions.filter(t => t.type === 'ถอนเงิน');
+                    renderPendingWithdrawals();
+                    updateStatistics();
+                }
+            } catch (error) {
+                console.error('Error loading pending withdrawals:', error);
+                pendingWithdrawals = [];
+                renderPendingWithdrawals();
+            }
+        }
+
+        // Render pending transactions
+        function renderPendingTransactions() {
+            const container = document.getElementById('pendingContent');
+            container.innerHTML = '';
+
+            if (pendingTransactions.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white p-6 rounded-lg shadow text-center fade-in">
+                        <i class="fas fa-check-circle text-6xl text-green-500 mb-4"></i>
+                        <p class="text-gray-500">ไม่มีรายการเติมเงินรอการอนุมัติ</p>
+                    </div>
+                `;
+                return;
+            }
+
+            pendingTransactions.forEach(transaction => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow p-4 card-hover fade-in topup-card';
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-plus-circle text-green-600 mr-2"></i>
+                                <span class="font-semibold text-green-600">${transaction.type}</span>
+                                <span class="ml-2 px-2 py-1 text-xs rounded-full ${getStatusClass(transaction.status)}">${transaction.status}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-1">ผู้ใช้: ${transaction.userId}</p>
+                            <p class="text-sm text-gray-600 mb-1">จำนวน: <span class="font-bold text-green-600">฿${formatCurrency(transaction.amount)}</span></p>
+                            <p class="text-sm text-gray-600 mb-1">ธนาคาร: ${transaction.bank}</p>
+                            <p class="text-xs text-gray-500">${transaction.date}</p>
+                        </div>
+                        <div class="flex flex-col space-y-2">
+                            <button onclick="showTransactionDetail('${transaction.userId}', '${transaction.date}', 'topup')" 
+                                    class="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600 btn-animate">
+                                <i class="fas fa-eye mr-1"></i>ดู
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        // Render pending withdrawals
+        function renderPendingWithdrawals() {
+            const container = document.getElementById('withdrawalsContent');
+            container.innerHTML = '';
+
+            if (pendingWithdrawals.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white p-6 rounded-lg shadow text-center fade-in">
+                        <i class="fas fa-wallet text-6xl text-amber-500 mb-4"></i>
+                        <p class="text-gray-500">ไม่มีรายการถอนเงินรอการอนุมัติ</p>
+                    </div>
+                `;
+                return;
+            }
+
+            pendingWithdrawals.forEach(transaction => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow p-4 card-hover fade-in withdrawal-card';
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-minus-circle text-amber-600 mr-2"></i>
+                                <span class="font-semibold text-amber-600">${transaction.type}</span>
+                                <span class="ml-2 px-2 py-1 text-xs rounded-full ${getStatusClass(transaction.status)}">${transaction.status}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-1">ผู้ใช้: ${transaction.userId}</p>
+                            <p class="text-sm text-gray-600 mb-1">จำนวน: <span class="font-bold text-amber-600">฿${formatCurrency(transaction.amount)}</span></p>
+                            <p class="text-sm text-gray-600 mb-1">ธนาคาร: ${transaction.bank}</p>
+                            <p class="text-sm text-gray-600 mb-1">บัญชี: ${transaction.account}</p>
+                            <p class="text-sm text-gray-600 mb-1">ชื่อบัญชี: ${transaction.accountName}</p>
+                            ${transaction.transactionId ? `<p class="text-xs text-blue-600 mb-1">ID: ${transaction.transactionId}</p>` : ''}
+                            <p class="text-xs text-gray-500">${transaction.date}</p>
+                        </div>
+                        <div class="flex flex-col space-y-2">
+                            <button onclick="showTransactionDetail('${transaction.userId}', '${transaction.date}', 'withdrawal')" 
+                                    class="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600 btn-animate">
+                                <i class="fas fa-eye mr-1"></i>ดู
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        // Show transaction detail modal
+        async function showTransactionDetail(userId, date, transactionType) {
+            let transaction;
+            if (transactionType === 'withdrawal') {
+                transaction = pendingWithdrawals.find(t => t.userId === userId && t.date === date);
+            } else {
+                transaction = pendingTransactions.find(t => t.userId === userId && t.date === date);
+            }
+            
+            if (!transaction) return;
+
+            const modal = document.getElementById('transactionModal');
+            const detailsContainer = document.getElementById('transactionDetails');
+            const actionsContainer = document.getElementById('transactionActions');
+
+            const typeColor = transaction.type === 'เติมเงิน' ? 'text-green-600' : 'text-amber-600';
+
+            detailsContainer.innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">ประเภท:</span>
+                        <span class="${typeColor} font-semibold">${transaction.type}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">ผู้ใช้:</span>
+                        <span>${transaction.userId}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">จำนวนเงิน:</span>
+                        <span class="font-bold">฿${formatCurrency(transaction.amount)}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">ธนาคาร:</span>
+                        <span>${transaction.bank}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">เลขบัญชี:</span>
+                        <span>${transaction.account}</span>
+                    </div>
+                    ${transaction.accountName ? `
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">ชื่อบัญชี:</span>
+                        <span>${transaction.accountName}</span>
+                    </div>
+                    ` : ''}
+                    ${transaction.transactionId ? `
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Transaction ID:</span>
+                        <span class="text-blue-600 text-sm">${transaction.transactionId}</span>
+                    </div>
+                    ` : ''}
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">สถานะ:</span>
+                        <span class="px-2 py-1 text-xs rounded-full ${getStatusClass(transaction.status)}">${transaction.status}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">วันที่:</span>
+                        <span>${transaction.date}</span>
+                    </div>
+                    ${transaction.slipUrl ? `
+                    <div class="mt-4">
+                        <p class="text-gray-600 mb-2">สลิปการโอนเงิน:</p>
+                        <img src="${transaction.slipUrl}" alt="Slip" class="w-full max-h-64 object-contain border rounded">
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+
+            // แสดงปุ่มตามประเภทรายการ
+            if (transactionType === 'withdrawal') {
+                actionsContainer.innerHTML = `
+                    <button onclick="approveWithdrawal('${transaction.transactionId || ''}', '${userId}', '${date}', ${transaction.amount})" 
+                            class="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 btn-animate">
+                        <i class="fas fa-check mr-2"></i>อนุมัติถอนเงิน
+                    </button>
+                    <button onclick="rejectWithdrawal('${transaction.transactionId || ''}', '${userId}', '${date}')" 
+                            class="flex-1 bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600 btn-animate">
+                        <i class="fas fa-times mr-2"></i>ปฏิเสธ
+                    </button>
+                `;
+            } else {
+                actionsContainer.innerHTML = `
+                    <button onclick="approveTopup('${userId}', '${date}', ${transaction.amount})" 
+                            class="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 btn-animate">
+                        <i class="fas fa-check mr-2"></i>อนุมัติเติมเงิน
+                    </button>
+                    <button onclick="rejectTopup('${userId}', '${date}')" 
+                            class="flex-1 bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600 btn-animate">
+                        <i class="fas fa-times mr-2"></i>ปฏิเสธ
+                    </button>
+                `;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        // Close transaction modal
+        function closeTransactionModal() {
+            document.getElementById('transactionModal').classList.add('hidden');
+        }
+
+        // Approve withdrawal - ใช้ FormData ตามแบบที่แนะนำ
+        async function approveWithdrawal(transactionId, userId, date, amount) {
+            const result = await Swal.fire({
+                title: 'ยืนยันการอนุมัติถอนเงิน',
+                html: `
+                    <p>คุณต้องการอนุมัติการถอนเงินจำนวน <strong>฿${formatCurrency(amount)}</strong> ใช่หรือไม่?</p>
+                    <p class="text-sm text-gray-600 mt-2">ระบบจะเปลี่ยนสถานะเป็น "สำเร็จ" ก่อน แล้วหักเงินจากกระเป๋า</p>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'อนุมัติ',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#10b981'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    // แสดง loading
+                    Swal.fire({
+                        title: 'กำลังดำเนินการ...',
+                        text: 'กรุณารอสักครู่',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // สร้าง FormData
+                    const data = new FormData();
+                    data.append('action', 'approve');
+                    data.append('type', 'ถอนเงิน');
+                    data.append('transactionId', transactionId);
+                    data.append('userId', userId);
+                    data.append('date', date);
+                    data.append('amount', amount);
+
+                    // ส่งข้อมูลด้วย fetch
+                    fetch(API_URL, {
+                        method: "POST",
+                        body: data
+                    })
+                    .then(res => res.text())
+                    .then(responseData => {
+                        console.log('Approve withdrawal response:', responseData);
+                        
+                        // ตรวจสอบ response
+                        if (responseData.includes('success') || 
+                            responseData.includes('สำเร็จ') || 
+                            responseData.includes('อนุมัติ')) {
+                            
+                            Swal.fire('สำเร็จ!', 'อนุมัติการถอนเงินเรียบร้อยแล้ว', 'success');
+                            closeTransactionModal();
+                            loadPendingWithdrawals();
+                        } else {
+                            throw new Error('ไม่สามารถอนุมัติได้: ' + responseData);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error approving withdrawal:', error);
+                        Swal.fire('ข้อผิดพลาด', error.message || 'ไม่สามารถอนุมัติการถอนเงินได้', 'error');
+                    });
+
+                } catch (error) {
+                    console.error('Error approving withdrawal:', error);
+                    Swal.fire('ข้อผิดพลาด', error.message || 'ไม่สามารถอนุมัติการถอนเงินได้', 'error');
+                }
+            }
+        }
+
+        // Reject withdrawal - ใช้ FormData ตามแบบที่แนะนำ
+        async function rejectWithdrawal(transactionId, userId, date) {
+            const { value: reason } = await Swal.fire({
+                title: 'เหตุผลในการปฏิเสธ',
+                input: 'textarea',
+                inputPlaceholder: 'กรอกเหตุผล (ไม่บังคับ)',
+                showCancelButton: true,
+                confirmButtonText: 'ปฏิเสธ',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#ef4444'
+            });
+
+            if (reason !== undefined) {
+                try {
+                    // แสดง loading
+                    Swal.fire({
+                        title: 'กำลังดำเนินการ...',
+                        text: 'กรุณารอสักครู่',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // สร้าง FormData
+                    const data = new FormData();
+                    data.append('action', 'reject');
+                    data.append('type', 'ถอนเงิน');
+                    data.append('transactionId', transactionId);
+                    data.append('userId', userId);
+                    data.append('date', date);
+                    data.append('reason', reason || 'ไม่ระบุเหตุผล');
+
+                    // ส่งข้อมูลด้วย fetch
+                    fetch(API_URL, {
+                        method: "POST",
+                        body: data
+                    })
+                    .then(res => res.text())
+                    .then(responseData => {
+                        console.log('Reject withdrawal response:', responseData);
+                        
+                        // ตรวจสอบ response
+                        if (responseData.includes('success') || 
+                            responseData.includes('สำเร็จ') || 
+                            responseData.includes('ปฏิเสธ')) {
+                            
+                            Swal.fire('สำเร็จ!', 'ปฏิเสธการถอนเงินเรียบร้อยแล้ว', 'success');
+                            closeTransactionModal();
+                            loadPendingWithdrawals();
+                        } else {
+                            throw new Error('ไม่สามารถปฏิเสธได้: ' + responseData);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error rejecting withdrawal:', error);
+                        Swal.fire('ข้อผิดพลาด', error.message || 'ไม่สามารถปฏิเสธการถอนเงินได้', 'error');
+                    });
+
+                } catch (error) {
+                    console.error('Error rejecting withdrawal:', error);
+                    Swal.fire('ข้อผิดพลาด', error.message || 'ไม่สามารถปฏิเสธการถอนเงินได้', 'error');
+                }
+            }
+        }
+
+        // Approve topup - ใช้ FormData ตามแบบที่แนะนำ
+        async function approveTopup(userId, date, amount) {
+            const result = await Swal.fire({
+                title: 'ยืนยันการอนุมัติ',
+                text: `คุณต้องการอนุมัติเติมเงิน จำนวน ฿${formatCurrency(amount)} ใช่หรือไม่?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'อนุมัติ',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#10b981'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    // แสดง loading
+                    Swal.fire({
+                        title: 'กำลังดำเนินการ...',
+                        text: 'กรุณารอสักครู่',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // สร้าง FormData
+                    const data = new FormData();
+                    data.append('action', 'approve');
+                    data.append('type', 'เติมเงิน');
+                    data.append('userId', userId);
+                    data.append('date', date);
+                    data.append('amount', amount);
+
+                    // ส่งข้อมูลด้วย fetch
+                    fetch(API_URL, {
+                        method: "POST",
+                        body: data
+                    })
+                    .then(res => res.text())
+                    .then(responseData => {
+                        console.log('Approve topup response:', responseData);
+                        
+                        // ตรวจสอบ response
+                        if (responseData.includes('success') || 
+                            responseData.includes('สำเร็จ') || 
+                            responseData.includes('อนุมัติ')) {
+                            
+                            Swal.fire('สำเร็จ!', 'อนุมัติเติมเงินเรียบร้อยแล้ว', 'success');
+                            closeTransactionModal();
+                            loadPendingTransactions();
+                        } else {
+                            throw new Error('ไม่สามารถอนุมัติได้: ' + responseData);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error approving topup:', error);
+                        Swal.fire('ข้อผิดพลาด', error.message || 'ไม่สามารถอนุมัติการเติมเงินได้', 'error');
+                    });
+
+                } catch (error) {
+                    console.error('Error approving topup:', error);
+                    Swal.fire('ข้อผิดพลาด', error.message || 'ไม่สามารถอนุมัติการเติมเงินได้', 'error');
+                }
+            }
+        }
+
+        // Reject topup - ใช้ FormData ตามแบบที่แนะนำ
+        async function rejectTopup(userId, date) {
+            const { value: reason } = await Swal.fire({
+                title: 'เหตุผลในการปฏิเสธ',
+                input: 'textarea',
+                inputPlaceholder: 'กรอกเหตุผล (ไม่บังคับ)',
+                showCancelButton: true,
+                confirmButtonText: 'ปฏิเสธ',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#ef4444'
+            });
+
+            if (reason !== undefined) {
+                try {
+                    // แสดง loading
+                    Swal.fire({
+                        title: 'กำลังดำเนินการ...',
+                        text: 'กรุณารอสักครู่',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // สร้าง FormData
+                    const data = new FormData();
+                    data.append('action', 'reject');
+                    data.append('type', 'เติมเงิน');
+                    data.append('userId', userId);
+                    data.append('date', date);
+                    data.append('reason', reason || 'ไม่ระบุเหตุผล');
+
+                    // ส่งข้อมูลด้วย fetch
+                    fetch(API_URL, {
+                        method: "POST",
+                        body: data
+                    })
+                    .then(res => res.text())
+                    .then(responseData => {
+                        console.log('Reject topup response:', responseData);
+                        
+                        // ตรวจสอบ response
+                        if (responseData.includes('success') || 
+                            responseData.includes('สำเร็จ') || 
+                            responseData.includes('ปฏิเสธ')) {
+                            
+                            Swal.fire('สำเร็จ!', 'ปฏิเสธเติมเงินเรียบร้อยแล้ว', 'success');
+                            closeTransactionModal();
+                            loadPendingTransactions();
+                        } else {
+                            throw new Error('ไม่สามารถปฏิเสธได้: ' + responseData);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error rejecting topup:', error);
+                        Swal.fire('ข้อผิดพลาด', error.message || 'ไม่สามารถปฏิเสธการเติมเงินได้', 'error');
+                    });
+
+                } catch (error) {
+                    console.error('Error rejecting topup:', error);
+                    Swal.fire('ข้อผิดพลาด', error.message || 'ไม่สามารถปฏิเสธการเติมเงินได้', 'error');
+                }
+            }
+        }
+
+        // Bulk Actions
+        async function approveAllTopups() {
+            if (pendingTransactions.length === 0) {
+                Swal.fire('แจ้งเตือน', 'ไม่มีรายการเติมเงินรอการอนุมัติ', 'info');
+                return;
+            }
+
+            const result = await Swal.fire({
+                title: 'อนุมัติเติมเงินทั้งหมด',
+                text: `คุณต้องการอนุมัติเติมเงินทั้งหมด ${pendingTransactions.length} รายการ ใช่หรือไม่?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'อนุมัติทั้งหมด',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#10b981'
+            });
+
+            if (result.isConfirmed) {
+                const loadingAlert = Swal.fire({
+                    title: 'กำลังดำเนินการ...',
+                    text: 'กรุณารอสักครู่',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    willOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const transaction of pendingTransactions) {
+                    try {
+                        // สร้าง FormData
+                        const data = new FormData();
+                        data.append('action', 'approve');
+                        data.append('type', 'เติมเงิน');
+                        data.append('userId', transaction.userId);
+                        data.append('date', transaction.date);
+                        data.append('amount', transaction.amount);
+
+                        // ส่งข้อมูลด้วย fetch แบบ sync
+                        const response = await fetch(API_URL, {
+                            method: "POST",
+                            body: data
+                        });
+
+                        const responseData = await response.text();
+                        
+                        if (responseData.includes('success') || 
+                            responseData.includes('สำเร็จ') || 
+                            responseData.includes('อนุมัติ')) {
+                            successCount++;
+                        } else {
+                            errorCount++;
+                        }
+                    } catch (error) {
+                        errorCount++;
+                        console.error('Error approving transaction:', error);
+                    }
+                }
+
+                Swal.close();
+                
+                if (errorCount === 0) {
+                    Swal.fire('สำเร็จ!', `อนุมัติเติมเงินทั้งหมด ${successCount} รายการเรียบร้อย`, 'success');
+                } else {
+                    Swal.fire('เสร็จสิ้น', `อนุมัติสำเร็จ ${successCount} รายการ, ล้มเหลว ${errorCount} รายการ`, 'info');
+                }
+
+                loadPendingTransactions();
+            }
+        }
+
+        // Show bulk withdrawal actions modal
+        function showBulkWithdrawalActions() {
+            if (pendingWithdrawals.length === 0) {
+                Swal.fire('แจ้งเตือน', 'ไม่มีรายการถอนเงินรอการอนุมัติ', 'info');
+                return;
+            }
+
+            const modal = document.getElementById('bulkModal');
+            const content = document.getElementById('bulkContent');
+
+            let totalAmount = pendingWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold mb-2">สรุปรายการถอนเงินที่รอ</h4>
+                        <p>จำนวนรายการ: <span class="font-bold">${pendingWithdrawals.length}</span> รายการ</p>
+                        <p>ยอดรวม: <span class="font-bold text-amber-600">฿${formatCurrency(totalAmount)}</span></p>
+                    </div>
+                    
+                    <div class="space-y-2 max-h-64 overflow-y-auto">
+                        ${pendingWithdrawals.map(w => `
+                            <div class="border rounded-lg p-3 text-sm">
+                                <div class="flex justify-between">
+                                    <span>${w.userId}</span>
+                                    <span class="font-bold">฿${formatCurrency(w.amount)}</span>
+                                </div>
+                                <div class="text-gray-500 text-xs">
+                                    ${w.bank} - ${w.account} (${w.accountName})
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="flex space-x-3 pt-4 border-t">
+                        <button onclick="bulkApproveWithdrawals()" 
+                                class="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 btn-animate">
+                            <i class="fas fa-check mr-2"></i>อนุมัติทั้งหมด
+                        </button>
+                        <button onclick="bulkRejectWithdrawals()" 
+                                class="flex-1 bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600 btn-animate">
+                            <i class="fas fa-times mr-2"></i>ปฏิเสธทั้งหมด
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeBulkModal() {
+            document.getElementById('bulkModal').classList.add('hidden');
+        }
+
+        // Bulk approve withdrawals
+        async function bulkApproveWithdrawals() {
+            const result = await Swal.fire({
+                title: 'อนุมัติถอนเงินทั้งหมด',
+                text: `คุณต้องการอนุมัติการถอนเงินทั้งหมด ${pendingWithdrawals.length} รายการ ใช่หรือไม่?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'อนุมัติทั้งหมด',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#10b981'
+            });
+
+            if (result.isConfirmed) {
+                closeBulkModal();
+                
+                const loadingAlert = Swal.fire({
+                    title: 'กำลังดำเนินการ...',
+                    text: 'กรุณารอสักครู่',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    willOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const withdrawal of pendingWithdrawals) {
+                    try {
+                        // สร้าง FormData
+                        const data = new FormData();
+                        data.append('action', 'approve');
+                        data.append('type', 'ถอนเงิน');
+                        data.append('transactionId', withdrawal.transactionId);
+                        data.append('userId', withdrawal.userId);
+                        data.append('date', withdrawal.date);
+                        data.append('amount', withdrawal.amount);
+
+                        // ส่งข้อมูลด้วย fetch แบบ sync
+                        const response = await fetch(API_URL, {
+                            method: "POST",
+                            body: data
+                        });
+
+                        const responseData = await response.text();
+                        
+                        if (responseData.includes('success') || 
+                            responseData.includes('สำเร็จ') || 
+                            responseData.includes('อนุมัติ')) {
+                            successCount++;
+                        } else {
+                            errorCount++;
+                        }
+                    } catch (error) {
+                        errorCount++;
+                        console.error('Error approving withdrawal:', error);
+                    }
+                }
+
+                Swal.close();
+                
+                if (errorCount === 0) {
+                    Swal.fire('สำเร็จ!', `อนุมัติถอนเงินทั้งหมด ${successCount} รายการเรียบร้อย`, 'success');
+                } else {
+                    Swal.fire('เสร็จสิ้น', `อนุมัติสำเร็จ ${successCount} รายการ, ล้มเหลว ${errorCount} รายการ`, 'info');
+                }
+
+                loadPendingWithdrawals();
+            }
+        }
+
+        // Bulk reject withdrawals
+        async function bulkRejectWithdrawals() {
+            const { value: reason } = await Swal.fire({
+                title: 'เหตุผลในการปฏิเสธทั้งหมด',
+                input: 'textarea',
+                inputPlaceholder: 'กรอกเหตุผล (ไม่บังคับ)',
+                showCancelButton: true,
+                confirmButtonText: 'ปฏิเสธทั้งหมด',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#ef4444'
+            });
+
+            if (reason !== undefined) {
+                closeBulkModal();
+                
+                const loadingAlert = Swal.fire({
+                    title: 'กำลังดำเนินการ...',
+                    text: 'กรุณารอสักครู่',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    willOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (const withdrawal of pendingWithdrawals) {
+                    try {
+                        // สร้าง FormData
+                        const data = new FormData();
+                        data.append('action', 'reject');
+                        data.append('type', 'ถอนเงิน');
+                        data.append('transactionId', withdrawal.transactionId);
+                        data.append('userId', withdrawal.userId);
+                        data.append('date', withdrawal.date);
+                        data.append('reason', reason || 'ไม่ระบุเหตุผล');
+
+                        // ส่งข้อมูลด้วย fetch แบบ sync
+                        const response = await fetch(API_URL, {
+                            method: "POST",
+                            body: data
+                        });
+
+                        const responseData = await response.text();
+                        
+                        if (responseData.includes('success') || 
+                            responseData.includes('สำเร็จ') || 
+                            responseData.includes('ปฏิเสธ')) {
+                            successCount++;
+                        } else {
+                            errorCount++;
+                        }
+                    } catch (error) {
+                        errorCount++;
+                        console.error('Error rejecting withdrawal:', error);
+                    }
+                }
+
+                Swal.close();
+                
+                if (errorCount === 0) {
+                    Swal.fire('สำเร็จ!', `ปฏิเสธถอนเงินทั้งหมด ${successCount} รายการเรียบร้อย`, 'success');
+                } else {
+                    Swal.fire('เสร็จสิ้น', `ปฏิเสธสำเร็จ ${successCount} รายการ, ล้มเหลว ${errorCount} รายการ`, 'info');
+                }
+
+                loadPendingWithdrawals();
+            }
+        }
+
+        // Load system statistics
+        async function loadSystemStats() {
+            try {
+                // สำหรับตอนนี้แสดงสถิติพื้นฐาน จากข้อมูลที่มี
+                const totalPending = pendingTransactions.length + pendingWithdrawals.length;
+                const totalTopupAmount = pendingTransactions.reduce((sum, t) => sum + t.amount, 0);
+                const totalWithdrawalAmount = pendingWithdrawals.reduce((sum, t) => sum + t.amount, 0);
+
+                systemStats = {
+                    totalPendingTransactions: totalPending,
+                    totalTopupAmount: totalTopupAmount,
+                    totalWithdrawalAmount: totalWithdrawalAmount,
+                    pendingTopupCount: pendingTransactions.length,
+                    pendingWithdrawalCount: pendingWithdrawals.length
+                };
+
+                renderSystemStats();
+            } catch (error) {
+                console.error('Error loading system statistics:', error);
+            }
+        }
+
+        // Render system statistics
+        function renderSystemStats() {
+            const container = document.getElementById('systemStats');
+            
+            const stats = [
+                { 
+                    label: 'รายการรอทั้งหมด', 
+                    value: systemStats.totalPendingTransactions || 0, 
+                    icon: 'fa-clock', 
+                    color: 'orange' 
+                },
+                { 
+                    label: 'เติมเงินรอ', 
+                    value: systemStats.pendingTopupCount || 0, 
+                    icon: 'fa-plus-circle', 
+                    color: 'green' 
+                },
+                { 
+                    label: 'ถอนเงินรอ', 
+                    value: systemStats.pendingWithdrawalCount || 0, 
+                    icon: 'fa-minus-circle', 
+                    color: 'red' 
+                },
+                { 
+                    label: 'ยอดเติมเงินรอ', 
+                    value: `฿${formatCurrency(systemStats.totalTopupAmount || 0)}`, 
+                    icon: 'fa-wallet', 
+                    color: 'blue' 
+                },
+                { 
+                    label: 'ยอดถอนเงินรอ', 
+                    value: `฿${formatCurrency(systemStats.totalWithdrawalAmount || 0)}`, 
+                    icon: 'fa-money-bill-wave', 
+                    color: 'purple' 
+                },
+                { 
+                    label: 'ความแตกต่าง', 
+                    value: `฿${formatCurrency((systemStats.totalTopupAmount || 0) - (systemStats.totalWithdrawalAmount || 0))}`, 
+                    icon: 'fa-balance-scale', 
+                    color: 'gray' 
+                }
+            ];
+
+            container.innerHTML = stats.map(stat => `
+                <div class="text-center p-4 bg-gray-50 rounded-lg fade-in">
+                    <i class="fas ${stat.icon} text-2xl text-${stat.color}-500 mb-2"></i>
+                    <p class="text-xs text-gray-500 mb-1">${stat.label}</p>
+                    <p class="font-bold text-${stat.color}-600">${stat.value}</p>
+                </div>
+            `).join('');
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            document.getElementById('pendingCount').textContent = pendingTransactions.length;
+            document.getElementById('pendingWithdrawals').textContent = pendingWithdrawals.length;
+            
+            // อัพเดทสถิติในแท็บสถิติด้วย
+            if (currentTab === 'stats') {
+                loadSystemStats();
+            }
+        }
+
+        // Initialize LIFF with ultra fast loading
+        window.onload = async function() {
+            try {
+                // Show app immediately
+                setTimeout(hideLoading, 20);
+
+                // Check LIFF_ID configuration
+                if (typeof LIFF_ID === 'undefined' || !LIFF_ID || LIFF_ID === 'YOUR_LIFF_ID' || LIFF_ID.trim() === '') {
+                    console.warn('LIFF_ID not properly configured, starting in demo mode');
+                    initApp();
+                    return;
+                }
+
+                // Initialize app immediately
+                initApp();
+
+                // Initialize LIFF in background
+                liff.init({ liffId: LIFF_ID }).then(() => {
+                    if (liff.isLoggedIn()) {
+                        // Reload data with real user
+                        loadPendingTransactions();
+                        loadPendingWithdrawals();
+                        loadSystemStats();
+                    } else {
+                        liff.login();
+                    }
+                }).catch(err => {
+                    console.error('LIFF init failed:', err);
+                    // Continue with demo mode
+                });
+
+            } catch (err) {
+                console.error('Initialization failed:', err);
+                setTimeout(hideLoading, 20);
+            }
+        };
+
+        // Initialize App with ultra fast execution
+        async function initApp() {
+            try {
+                // Set user data
+                if (typeof liff !== 'undefined' && liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    userData = {
+                        userId: profile.userId,
+                        name: profile.displayName,
+                        picture: profile.pictureUrl
+                    };
+                } else {
+                    // Demo mode
+                    userData = {
+                        userId: 'demo-admin',
+                        name: 'Demo Admin',
+                        picture: null
+                    };
+                }
+
+                // Check API configuration
+                if (!API_URL || API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
+                    console.warn('API_URL not configured');
+                }
+
+                // Load initial data in background
+                Promise.all([
+                    loadPendingTransactions(),
+                    loadPendingWithdrawals(),
+                    loadSystemStats()
+                ]).catch(err => {
+                    console.warn('Failed to load some data:', err);
+                });
+                
+                // Set default tab
+                switchTab('pending');
+                
+            } catch (error) {
+                console.error('Error initializing app:', error);
+            }
+        }
+    </script>
+</body>
+</html>
