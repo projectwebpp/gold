@@ -51,7 +51,21 @@
             </div>
         </div>
     </div>
-
+       <!-- Tab Navigation -->
+        <div class="tabs fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t z-10" style="position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; z-index: 50 !important;">
+            <div class="flex">
+                <button id="portfolioTab" onclick="switchTab('portfolio')" class="tab flex-1 py-3 text-center font-semibold tab-active btn-animate">
+                    <i class="fas fa-chart-pie mr-2"></i>พอร์ตโฟลิโอ
+                </button>
+                <button id="dashboardTab" onclick="switchTab('dashboard')" class="tab flex-1 py-3 text-center font-semibold btn-animate">
+                    <i class="fas fa-chart-line mr-2"></i>ราคาทอง
+                </button>
+                <button id="walletTab" onclick="switchTab('wallet')" class="tab flex-1 py-3 text-center font-semibold btn-animate">
+                    <i class="fas fa-wallet mr-2"></i>กระเป๋าเงิน
+                </button>
+            </div>
+        </div>
+    </div>
     <!-- Improved Loading Screen -->
     <div id="loading" class="fixed inset-0 bg-gradient-to-br from-yellow-400 to-amber-500 z-50 flex items-center justify-center">
         <div class="text-center">
@@ -171,21 +185,7 @@
             </div>
         </div>
 
-        <!-- Tab Navigation -->
-        <div class="tabs fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t z-10" style="position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; z-index: 50 !important;">
-            <div class="flex">
-                <button id="portfolioTab" onclick="switchTab('portfolio')" class="tab flex-1 py-3 text-center font-semibold tab-active btn-animate">
-                    <i class="fas fa-chart-pie mr-2"></i>พอร์ตโฟลิโอ
-                </button>
-                <button id="dashboardTab" onclick="switchTab('dashboard')" class="tab flex-1 py-3 text-center font-semibold btn-animate">
-                    <i class="fas fa-chart-line mr-2"></i>ราคาทอง
-                </button>
-                <button id="walletTab" onclick="switchTab('wallet')" class="tab flex-1 py-3 text-center font-semibold btn-animate">
-                    <i class="fas fa-wallet mr-2"></i>กระเป๋าเงิน
-                </button>
-            </div>
-        </div>
-    </div>
+     
 
     <script src="config.js"></script>
     <script src="utils.js"></script>
